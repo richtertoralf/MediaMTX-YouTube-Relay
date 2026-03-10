@@ -109,6 +109,80 @@ Damit werden die Pfade
 * table2
 bis
 * table6
-
+  
 automatisch vom gleichen Hook verarbeitet.
 
+## Script: `yt-push.sh`
+
+Pfad: `/usr/local/bin/yt-push.sh`
+
+### Aufgabe des Scripts:
+
+1. passende Key-Datei laden
+2. den aktuellen Pfad (MTX_PATH) auswerten
+3. den zugehörigen YouTube-Key aus youtube_keys.map lesen
+4. ffmpeg mit dem lokalen MediaMTX-RTSP-Stream starten
+5. den Stream zu YouTube weiterleiten
+
+Beispiel:
+```bash
+#!/bin/sh
+set -eu
+
+KEYFILE="/usr/local/etc/youtube_keys.map"
+
+if [ ! -f "$KEYFILE" ]; then
+  echo "Key file not found: $KEYFILE" >&2
+  exit 1
+fi
+
+if [ -z "${MTX_PATH:-}" ]; then
+  echo "MTX_PATH is not set" >&2
+  exit 1
+fi
+
+KEY="$(
+  awk -F= -v path="$MTX_PATH" '
+    $1 == path {
+      print substr($0, index($0, "=") + 1)
+      found=1
+      exit
+    }
+    END {
+      if (!found) exit 1
+    }
+  ' "$KEYFILE"
+)" || {
+  echo "No YouTube key found for path: $MTX_PATH" >&2
+  exit 1
+}
+
+exec ffmpeg \
+  -loglevel warning \
+  -rtsp_transport tcp \
+  -i "rtsp://127.0.0.1:${RTSP_PORT}/${MTX_PATH}" \
+  -c copy \
+  -f flv \
+  "rtmp://a.rtmp.youtube.com/live2/${KEY}"
+```
+
+### Rechte
+Empfohlene Rechte:
+```bash
+sudo chown root:root /usr/local/bin/yt-push.sh
+sudo chmod 700 /usr/local/bin/yt-push.sh
+
+sudo chown root:root /usr/local/etc/youtube_keys.map
+sudo chmod 600 /usr/local/etc/youtube_keys.map
+
+sudo chown root:root /usr/local/etc/mediamtx.yml
+sudo chmod 644 /usr/local/etc/mediamtx.yml
+```
+Da die Dienste auf dieser Maschine als root laufen, ist diese Absicherung passend. Besser ist natürlich ein spezieller Dienst-User.
+automatisch vom gleichen Hook verarbeitet.
+
+### Log
+Logs live ansehen:
+```
+journalctl -u mediamtx -f
+```
