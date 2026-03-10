@@ -22,6 +22,12 @@ Deshalb wird die Übertragung in **zwei Abschnitte** aufgeteilt:
 Die eigentliche Optimierung betrifft also vor allem den **ersten Hop** vom Event zur Cloud.  
 Dort sind **SRT** und **H.265** entscheidend.
 
+--- 
+## ZowietekBox
+Quelle, klassisches sauberes SRT als Caller:
+```
+srt://192.168.95.18:8890?streamid=publish:table6&pkt_size=1316
+```
 ---
 
 ## Architektur
